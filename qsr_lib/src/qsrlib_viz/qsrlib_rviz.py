@@ -1,16 +1,32 @@
 #!/usr/bin/env python
 from __future__ import print_function, division
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import rospy
-from qsrlib.msg import *
-from qsrlib_io.world_trace import World_Trace
-from qsrlib_io.world_qsr_trace import World_QSR_Trace
+from qsr_lib.srv import QSRViz, QSRVizRequest, QSRVizResponse
 
 
-def rviz_trace_and_qsr_trace(data):
-    print("Foo")
+def handle_qsrlib_rviz(req):
+    uuid = req.uuid
+    world_trace = pickle.loads(req.world_trace)
+    world_qsr_trace = pickle.loads(req.world_qsr_trace)
+    # here can do what you like with the data
+    # print(uuid, world_trace.get_sorted_timestamps()) # dbg
+    return QSRVizResponse()
 
 
-def listener_rviz_trace_and_qsr_trace(topic_name="qsrlib_viz"):
-    rospy.init_node('qsrlib_rviz')
-    rospy.Subscriber(topic_name, QSRViz, rviz_trace_and_qsr_trace)
-    rospy.spin()
+def cl_qsrlib_rviz(uuid, world_trace, world_qsr_trace, srv_name="/qsrlib_rviz"):
+    rospy.wait_for_service(srv_name)
+    try:
+        req = QSRVizRequest()
+        req.header.stamp = rospy.get_rostime()
+        req.uuid = uuid
+        req.world_trace = pickle.dumps(world_trace)
+        req.world_qsr_trace = pickle.dumps(world_qsr_trace)
+        proxy = rospy.ServiceProxy(srv_name, QSRViz)
+        res = proxy(req)
+        return res
+    except rospy.ServiceException, e:
+        print("Service call failed: %s"%e)

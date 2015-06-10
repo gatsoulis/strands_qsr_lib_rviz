@@ -12,6 +12,7 @@ catkin_python_setup()
 add_service_files(
   FILES
   RequestQSRs.srv
+  QSRViz.srv
 )
 
 generate_messages(
