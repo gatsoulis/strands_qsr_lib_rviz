@@ -3,7 +3,7 @@ from __future__ import print_function, division
 import argparse
 import rospy
 from qsr_lib.srv import QSRViz
-from qsrlib_viz.qsrlib_rviz import handle_qsrlib_rviz
+from qsrlib_viz.qsrlib_rviz import QSRlib_Rviz
 
 
 if __name__ == "__main__":
@@ -13,8 +13,10 @@ if __name__ == "__main__":
 
     topic_name = args.topic if args.topic else "/qsrlib_rviz"
 
+    qsrlib_rviz = QSRlib_Rviz()
+
     rospy.init_node('qsrlib_rviz_server')
-    s = rospy.Service(topic_name, QSRViz, handle_qsrlib_rviz)
+    s = rospy.Service(topic_name, QSRViz, qsrlib_rviz.handle_qsrlib_rviz)
     rospy.spin()
 
 

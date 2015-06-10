@@ -8,13 +8,17 @@ import rospy
 from qsr_lib.srv import QSRViz, QSRVizRequest, QSRVizResponse
 
 
-def handle_qsrlib_rviz(req):
-    uuid = req.uuid
-    world_trace = pickle.loads(req.world_trace)
-    world_qsr_trace = pickle.loads(req.world_qsr_trace)
-    # here can do what you like with the data
-    # print(uuid, world_trace.get_sorted_timestamps()) # dbg
-    return QSRVizResponse()
+class QSRlib_Rviz(object):
+    def __init__(self):
+        pass
+
+    def handle_qsrlib_rviz(self, req):
+        uuid = req.uuid
+        world_trace = pickle.loads(req.world_trace)
+        world_qsr_trace = pickle.loads(req.world_qsr_trace)
+        # here can do what you like with the data
+        print(uuid, world_trace.get_sorted_timestamps()) # dbg
+        return QSRVizResponse()
 
 
 def cl_qsrlib_rviz(uuid, world_trace, world_qsr_trace, srv_name="/qsrlib_rviz"):
