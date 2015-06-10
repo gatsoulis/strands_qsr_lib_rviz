@@ -4,6 +4,7 @@ import argparse
 import rospy
 from qsr_lib.srv import QSRViz
 from qsrlib_viz.qsrlib_rviz import QSRlib_Rviz
+from interactive_markers.interactive_marker_server import *
 
 
 if __name__ == "__main__":
@@ -12,10 +13,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     topic_name = args.topic if args.topic else "/qsrlib_rviz"
-
-    qsrlib_rviz = QSRlib_Rviz()
-
     rospy.init_node('qsrlib_rviz_server')
+    # initilize server to connect to rviz
+    server = InteractiveMarkerServer("QSR_markers")
+    qsrlib_rviz = QSRlib_Rviz(server)
+ 
     s = rospy.Service(topic_name, QSRViz, qsrlib_rviz.handle_qsrlib_rviz)
     rospy.spin()
 
