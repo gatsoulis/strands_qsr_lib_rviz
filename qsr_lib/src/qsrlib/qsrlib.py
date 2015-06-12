@@ -134,6 +134,9 @@ class QSRlib(object):
                 except KeyError:
                     print("ERROR (QSR_Lib.__set_qsrs_active): it seems that this QSR type '" + qsr_type + "' has not been implemented yet; or maybe a typo?")
 
+    def get_all_possible_relations_of_qsr(self, qsr_name):
+        return self.__qsrs_active[qsr_name].all_possible_relations
+
     def request_qsrs(self, request_message, reset=True):
         """
 
