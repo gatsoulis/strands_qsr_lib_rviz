@@ -14,7 +14,7 @@ from visualization_msgs.msg import *
 from std_msgs.msg import ColorRGBA
 import numpy as np
 import colorsys
-
+import sys
 
 class QSRlib_Rviz(object):
     def __init__(self, server):
@@ -29,7 +29,8 @@ class QSRlib_Rviz(object):
         print(self.uuid, "\n")
         self.world = pickle.loads(req.world_trace)
         self.world_qsr = pickle.loads(req.world_qsr_trace)
-                                                                                                                ###### for Yianni
+        print(self.world_qsr.qsr_type)    
+        sys.exit()                                                                                               ###### for Yianni
         self.qsr_range = ['near','medium','far']
         self.parse_world()
         #print(self.traj)

@@ -2,4 +2,6 @@ Header header
 string uuid
 string world_trace
 string world_qsr_trace
+string[] current_uuids
+string[] all_possible_relations
 ---
