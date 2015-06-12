@@ -15,6 +15,7 @@ from std_msgs.msg import ColorRGBA
 import numpy as np
 import colorsys
 import sys
+from qsrlib.qsrlib import QSRlib
 
 class QSRlib_Rviz(object):
     def __init__(self, server):
@@ -39,11 +40,7 @@ class QSRlib_Rviz(object):
                 self.delete(key)
                 #pass
 
-        # reading the possible relations
-        if req.all_possible_relations == []:
-            pass    #Yianni
-        else:
-            self.qsr_range = req.all_possible_relations
+        self.qsr_range = req.all_possible_relations if req.all_possible_relations else QSRlib().get_all_possible_relations_of_qsr(req.world_qsr_trace.qsr_type)  # reading the possible relations
         self.parse_world()
         self.parse_qsr()
         self.colors()                       # generate colors for the different qsrs
