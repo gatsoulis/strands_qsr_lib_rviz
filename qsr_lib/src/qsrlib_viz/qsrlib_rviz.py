@@ -22,23 +22,30 @@ class QSRlib_Rviz(object):
         self.traj = {}
         self.objects_location = {}
         self.qsr_old = {}
-        
+        self.rviz_ids = {}
+        self.rviz_ids[1] = {}
+        self.rviz_ids[2] = {}
+        self.qsr_range = None
+    
     #--------------------------------------------------------------------#
     def handle_qsrlib_rviz(self, req):
         self.uuid = req.uuid
-        #print(self.uuid, "\n")
         self.world = pickle.loads(req.world_trace)
         self.world_qsr = pickle.loads(req.world_qsr_trace)
-        #print(self.world_qsr.qsr_type)
+        # removing old ids
         self.current_ids = req.current_uuids
-        self.qsr_range = req.all_possible_relations
-        #print(self.qsr_range)
+        for key in self.traj.keys():
+            if key not in self.current_ids:
+                self.delete(key)
+                #pass
+
+        # reading the possible relations
+        if req.all_possible_relations == []:
+            pass    #Yianni
+        else:
+            self.qsr_range = req.all_possible_relations
         self.parse_world()
-        #print(self.traj)
-        #print(self.objects)
-        #print(self.objects_location)
         self.parse_qsr()
-        #print(self.qsr)
         self.colors()                       # generate colors for the different qsrs
         self.plot_traj1()                   # plot the first kind of qsrs (4 lines)
         self.plot_traj2()                   # plot the second kind (lines to objects)
@@ -56,6 +63,8 @@ class QSRlib_Rviz(object):
             self.objects_location[self.uuid] = {}
             #self.qsr[self.uuid] = {}
             self.qsr_old[self.uuid] = {}
+            self.rviz_ids[1][self.uuid] = []
+            self.rviz_ids[2][self.uuid] = []
 
         self.objects = []
         for i in self.world.get_sorted_timestamps():
@@ -71,8 +80,6 @@ class QSRlib_Rviz(object):
                     self.objects_location[self.uuid][j]['y'] = self.world.trace[i].objects[j].y
                     self.objects_location[self.uuid][j]['z'] = .1
                 
-                
-    
     #--------------------------------------------------------------------#        
     def parse_qsr(self):
         self.qsr = {}
@@ -108,8 +115,9 @@ class QSRlib_Rviz(object):
         # create an interactive marker for our server
         int_marker = InteractiveMarker()
         int_marker.header.frame_id = "map"
-        int_marker.name = name
-        int_marker.description = name
+        int_marker.name = name+str(self.traj[self.uuid]['processed'])
+        self.rviz_ids[1][self.uuid].append(name+str(self.traj[self.uuid]['processed']))
+        int_marker.description = ''
 	
         pose = Pose()
         pose.position.x = X[0]
@@ -173,6 +181,7 @@ class QSRlib_Rviz(object):
         int_marker = InteractiveMarker()
         int_marker.header.frame_id = "map"
         int_marker.name = name+str(self.traj[self.uuid]['processed'])
+        self.rviz_ids[2][self.uuid].append(name+str(self.traj[self.uuid]['processed']))
         int_marker.description = name
 	
         pose = Pose()
@@ -230,6 +239,7 @@ class QSRlib_Rviz(object):
         int_marker = InteractiveMarker()
         int_marker.header.frame_id = "map"
         int_marker.name = name+str(self.traj[self.uuid]['processed'])
+        self.rviz_ids[2][self.uuid].append(name+str(self.traj[self.uuid]['processed']))
         int_marker.description = ''
 	
         pose = Pose()
@@ -242,6 +252,8 @@ class QSRlib_Rviz(object):
         line_marker.type = Marker.LINE_LIST
         line_marker.scale.x = 0.04
 
+        start = self.traj[self.uuid]['processed']
+
         line_marker_qsr = []
         qsr = self.qsr[self.qsr_key]
         line_marker.points = []
@@ -249,42 +261,18 @@ class QSRlib_Rviz(object):
         obj = (name.split(',')[1]).split('\n')[0]
         loc = self.objects_location[self.uuid][obj]
 
-        #if self.traj[self.uuid]['processed'] == 0:              #first time I plot this traj
-        #start = self.traj[self.uuid]['processed']
-        """
-        if start == 0:
-            p = Point()
-            p.x = X[0]-X[0]
-            p.y = Y[0]-Y[0]
-            p.z = Z[0]-Z[0]
-            line_marker.points.append(p)
-            p = Point()
-            p.x = loc['x']-X[0]
-            p.y = loc['y']-Y[0]
-            p.z = loc['z']-Z[0]
-            line_marker.points.append(p)
-            index = self.qsr_range.index(qsr[0])
-            color = ColorRGBA()
-            color.r = self.RGB[index][0]
-            color.g = self.RGB[index][1]
-            color.b = self.RGB[index][2]
-            color.a = .9
-            line_marker.colors.append(color)
-            line_marker.colors.append(color)
-        """
         if self.qsr_key in self.qsr_old[self.uuid]:        
             old_qsr = self.qsr_old[self.uuid][self.qsr_key]
         else:   old_qsr = ''
    
-        #print(start,len(qsr))
         if old_qsr == '':
             print(self.uuid,self.qsr_key,old_qsr)
         for i in range(len(qsr)):
-            if old_qsr != qsr[i]:       #change!
+            if old_qsr != qsr[i]:      
                 p = Point()
-                p.x = X[i]-X[0]
-                p.y = Y[i]-Y[0]
-                p.z = Z[i]-Z[0]
+                p.x = X[start+i]-X[0]
+                p.y = Y[start+i]-Y[0]
+                p.z = Z[start+i]-Z[0]
                 line_marker.points.append(p)
                 p = Point()
                 p.x = loc['x']-X[0]
@@ -311,6 +299,23 @@ class QSRlib_Rviz(object):
         int_marker.controls.append(control)
         return int_marker
      
+
+    #--------------------------------------------------------------------#   
+    def delete(self,key):
+        print('GOING TO DELETE : ',key)
+        for name in self.rviz_ids[2][key]:
+            self.server[2].erase(name)
+            self.server[2].applyChanges()
+        for name in self.rviz_ids[1][key]:
+            self.server[1].erase(name)
+            self.server[1].applyChanges()
+        self.rviz_ids[2].pop(key, None)
+        self.rviz_ids[1].pop(key, None)
+        self.traj.pop(key, None)
+        self.qsr_old.pop(key, None)
+        self.objects_location.pop(key, None)
+        
+
     #--------------------------------------------------------------------#   
     def colors(self):
         N = len(self.qsr_range)
