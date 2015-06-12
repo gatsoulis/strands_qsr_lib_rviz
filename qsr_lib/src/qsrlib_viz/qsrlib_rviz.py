@@ -21,17 +21,18 @@ class QSRlib_Rviz(object):
         self.server = server
         self.traj = {}
         self.objects_location = {}
-        self.qsr = {}
+        self.qsr_old = {}
         
     #--------------------------------------------------------------------#
     def handle_qsrlib_rviz(self, req):
         self.uuid = req.uuid
-        print(self.uuid, "\n")
+        #print(self.uuid, "\n")
         self.world = pickle.loads(req.world_trace)
         self.world_qsr = pickle.loads(req.world_qsr_trace)
-        print(self.world_qsr.qsr_type)    
-        sys.exit()                                                                                               ###### for Yianni
-        self.qsr_range = ['near','medium','far']
+        #print(self.world_qsr.qsr_type)
+        self.current_ids = req.current_uuids
+        self.qsr_range = req.all_possible_relations
+        #print(self.qsr_range)
         self.parse_world()
         #print(self.traj)
         #print(self.objects)
@@ -41,6 +42,7 @@ class QSRlib_Rviz(object):
         self.colors()                       # generate colors for the different qsrs
         self.plot_traj1()                   # plot the first kind of qsrs (4 lines)
         self.plot_traj2()                   # plot the second kind (lines to objects)
+        self.traj[self.uuid]['processed'] = len(self.traj[self.uuid]['x'])
         return QSRVizResponse()
      
     #--------------------------------------------------------------------#   
@@ -52,7 +54,9 @@ class QSRlib_Rviz(object):
             self.traj[self.uuid]['z'] = []
             self.traj[self.uuid]['processed'] = 0
             self.objects_location[self.uuid] = {}
-            self.qsr[self.uuid] = {}
+            #self.qsr[self.uuid] = {}
+            self.qsr_old[self.uuid] = {}
+
         self.objects = []
         for i in self.world.get_sorted_timestamps():
             for j in self.world.trace[i].objects:
@@ -71,14 +75,15 @@ class QSRlib_Rviz(object):
     
     #--------------------------------------------------------------------#        
     def parse_qsr(self):
+        self.qsr = {}
         for i in self.world_qsr.get_sorted_timestamps():
             for j in self.world_qsr.trace[i].qsrs:
-                if j not in self.qsr[self.uuid]:   self.qsr[self.uuid][j] = []
-                self.qsr[self.uuid][j].append(self.world_qsr.trace[i].qsrs[j].qsr)
+                if j not in self.qsr:   self.qsr[j] = []
+                self.qsr[j].append(self.world_qsr.trace[i].qsrs[j].qsr)
     
     #--------------------------------------------------------------------#            
     def plot_traj1(self):
-        keys = self.qsr[self.uuid].keys()
+        keys = self.qsr.keys()
         for i in range(len(keys)):
             self.qsr_key = keys[i]
             offset = np.ones(len(self.traj[self.uuid]['x']))*i*.12
@@ -88,16 +93,15 @@ class QSRlib_Rviz(object):
      
     #--------------------------------------------------------------------#       
     def plot_traj2(self):
-        keys = self.qsr[self.uuid].keys()
-        int_marker = self.create_object_marker2(self.uuid, self.traj[self.uuid]['x'], self.traj[self.uuid]['y'], self.traj[self.uuid]['z'])
-        self.server[2].insert(int_marker, self.objFeedback)
-        self.server[2].applyChanges()
+        keys = self.qsr.keys()
         for i in range(len(keys)):
             self.qsr_key = keys[i]
             int_marker = self.create_object_lines(self.uuid+'-'+self.qsr_key, self.traj[self.uuid]['x'], self.traj[self.uuid]['y'], self.traj[self.uuid]['z'])
             self.server[2].insert(int_marker, self.objFeedback)
             self.server[2].applyChanges()
-        self.traj[self.uuid]['processed'] = len(self.traj[self.uuid]['x'])
+        int_marker = self.create_object_marker2(self.uuid, self.traj[self.uuid]['x'], self.traj[self.uuid]['y'], self.traj[self.uuid]['z'])
+        self.server[2].insert(int_marker, self.objFeedback)
+        self.server[2].applyChanges()
      
     #--------------------------------------------------------------------#   
     def create_object_marker1(self, name, X, Y, Z):
@@ -120,23 +124,24 @@ class QSRlib_Rviz(object):
         start = self.traj[self.uuid]['processed']
 
         line_marker_qsr = []
-        qsr = self.qsr[self.uuid][self.qsr_key]
+        qsr = self.qsr[self.qsr_key]
         line_marker.points = []
         p = Point()
         p.x = X[start]-X[0]
         p.y = Y[start]-Y[0]
         p.z = Z[start]-Z[0]
         line_marker.points.append(p)
-        line_marker_qsr.append(qsr[start])
-        for i in range(start+1,len(X)-1):
+        line_marker_qsr.append(qsr[0])
+        for k,i in enumerate(range(start+1,len(X)-1)):
+            #print(len(qsr),k+1)
             p = Point()
             p.x = X[i]-X[0]
             p.y = Y[i]-Y[0]
             p.z = Z[i]-Z[0]
             line_marker.points.append(p)
             line_marker.points.append(p)
-            line_marker_qsr.append(qsr[i])
-            line_marker_qsr.append(qsr[i])
+            line_marker_qsr.append(qsr[k+1])
+            line_marker_qsr.append(qsr[k+1])
         p = Point()
         p.x = X[-1]-X[0]
         p.y = Y[-1]-Y[0]
@@ -167,7 +172,7 @@ class QSRlib_Rviz(object):
         # create an interactive marker for our server
         int_marker = InteractiveMarker()
         int_marker.header.frame_id = "map"
-        int_marker.name = name
+        int_marker.name = name+str(self.traj[self.uuid]['processed'])
         int_marker.description = name
 	
         pose = Pose()
@@ -238,14 +243,15 @@ class QSRlib_Rviz(object):
         line_marker.scale.x = 0.04
 
         line_marker_qsr = []
-        qsr = self.qsr[self.uuid][self.qsr_key]
+        qsr = self.qsr[self.qsr_key]
         line_marker.points = []
         line_marker.colors = []
         obj = (name.split(',')[1]).split('\n')[0]
         loc = self.objects_location[self.uuid][obj]
 
         #if self.traj[self.uuid]['processed'] == 0:              #first time I plot this traj
-        start = self.traj[self.uuid]['processed']
+        #start = self.traj[self.uuid]['processed']
+        """
         if start == 0:
             p = Point()
             p.x = X[0]-X[0]
@@ -265,9 +271,15 @@ class QSRlib_Rviz(object):
             color.a = .9
             line_marker.colors.append(color)
             line_marker.colors.append(color)
-                
-        old_qsr = qsr[start]
-        for i in range(start+1,len(qsr)):
+        """
+        if self.qsr_key in self.qsr_old[self.uuid]:        
+            old_qsr = self.qsr_old[self.uuid][self.qsr_key]
+        else:   old_qsr = ''
+   
+        #print(start,len(qsr))
+        if old_qsr == '':
+            print(self.uuid,self.qsr_key,old_qsr)
+        for i in range(len(qsr)):
             if old_qsr != qsr[i]:       #change!
                 p = Point()
                 p.x = X[i]-X[0]
@@ -288,6 +300,8 @@ class QSRlib_Rviz(object):
                 line_marker.colors.append(color)
                 line_marker.colors.append(color)
                 old_qsr = qsr[i]
+
+        self.qsr_old[self.uuid][self.qsr_key] = qsr[-1]
 
         # create a control which will move the box
         # this control does not contain any markers,
@@ -313,7 +327,8 @@ class QSRlib_Rviz(object):
             #z = feedback.pose.position.z
             #self.server[1].applyChanges()
         
-def cl_qsrlib_rviz(uuid, world_trace, world_qsr_trace, srv_name="/qsrlib_rviz"):
+def cl_qsrlib_rviz(uuid, world_trace, world_qsr_trace, current_uuids, \
+     qsr_options = [], srv_name="/qsrlib_rviz"):
     rospy.wait_for_service(srv_name)
     try:
         req = QSRVizRequest()
@@ -321,6 +336,8 @@ def cl_qsrlib_rviz(uuid, world_trace, world_qsr_trace, srv_name="/qsrlib_rviz"):
         req.uuid = uuid
         req.world_trace = pickle.dumps(world_trace)
         req.world_qsr_trace = pickle.dumps(world_qsr_trace)
+        req.current_uuids = current_uuids
+        req.all_possible_relations = qsr_options 
         proxy = rospy.ServiceProxy(srv_name, QSRViz)
         res = proxy(req)
         return res
