@@ -39,8 +39,7 @@ class QSRlib_Rviz(object):
             if key not in self.current_ids:
                 self.delete(key)
                 #pass
-
-        self.qsr_range = req.all_possible_relations if req.all_possible_relations else QSRlib().get_all_possible_relations_of_qsr(req.world_qsr_trace.qsr_type)  # reading the possible relations
+        self.qsr_range = req.all_possible_relations if req.all_possible_relations else QSRlib().get_all_possible_relations_of_qsr(self.world_qsr.qsr_type)  # reading the possible relations
         self.parse_world()
         self.parse_qsr()
         self.colors()                       # generate colors for the different qsrs
