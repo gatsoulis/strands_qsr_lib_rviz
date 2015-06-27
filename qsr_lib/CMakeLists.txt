@@ -36,3 +36,8 @@ install(PROGRAMS
 install(DIRECTORY share
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+if (CATKIN_ENABLE_TESTING)
+  find_package(catkin REQUIRED COMPONENTS rostest)
+  add_rostest(tests/qtc_tester.test)
+endif()
