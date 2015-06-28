@@ -8,11 +8,12 @@ from interactive_markers.interactive_marker_server import *
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--topic", help="topic name to subscribe", type=str)
-    args = parser.parse_args()
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument("-t", "--topic", help="topic name to subscribe", type=str)
+    #args = parser.parse_args() 
+    topic_name = rospy.get_param("~topic_name", "/qsrlib_rviz")
 
-    topic_name = args.topic if args.topic else "/qsrlib_rviz"
+    #topic_name = args.topic if args.topic else "/qsrlib_rviz"
     rospy.init_node('qsrlib_rviz_server')
     # initilize server to connect to rviz
     server = {}
